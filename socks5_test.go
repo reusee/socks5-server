@@ -8,7 +8,7 @@ import (
 )
 
 func TestServer(t *testing.T) {
-	server, err := NewSocksServer("0.0.0.0:33333")
+	server, err := New("0.0.0.0:33333")
 	if err != nil {
 		t.Fatal(err)
 	}

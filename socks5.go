@@ -47,7 +47,7 @@ type SocksClientInfo struct {
 	HostPort string
 }
 
-func NewSocksServer(listenAddr string) (*SocksServer, error) {
+func New(listenAddr string) (*SocksServer, error) {
 	server := &SocksServer{
 		Signaler: signaler.NewSignaler(),
 		Closer:   closer.NewCloser(),
