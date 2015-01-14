@@ -75,63 +75,46 @@ func New(listenAddr string) (*SocksServer, error) {
 }
 
 func (self *SocksServer) handshake(conn net.Conn) {
-	var ver, nMethods byte
+	var err error
+	read := func(v interface{}) {
+		if err != nil {
+			return
+		}
+		err = binary.Read(conn, binary.BigEndian, v)
+	}
+	write := func(v interface{}) {
+		if err != nil {
+			return
+		}
+		err = binary.Write(conn, binary.BigEndian, v)
+	}
 
 	// handshake
-	err := binary.Read(conn, binary.BigEndian, &ver)
-	if err != nil {
-		return
-	}
-	err = binary.Read(conn, binary.BigEndian, &nMethods)
+	var ver, nMethods byte
+	read(&ver)
+	read(&nMethods)
 	if err != nil {
 		return
 	}
 	methods := make([]byte, nMethods)
-	err = binary.Read(conn, binary.BigEndian, methods)
-	if err != nil {
-		return
-	}
-	err = binary.Write(conn, binary.BigEndian, VERSION)
-	if err != nil {
-		return
-	}
+	read(methods)
+	write(VERSION)
 	if ver != VERSION || nMethods < byte(1) {
-		err = binary.Write(conn, binary.BigEndian, METHOD_NO_ACCEPTABLE)
-		if err != nil {
-			return
-		}
+		write(METHOD_NO_ACCEPTABLE)
 	} else {
 		if bytes.IndexByte(methods, METHOD_NOT_REQUIRED) == -1 {
-			err = binary.Write(conn, binary.BigEndian, METHOD_NO_ACCEPTABLE)
-			if err != nil {
-				return
-			}
+			write(METHOD_NO_ACCEPTABLE)
 		} else {
-			err = binary.Write(conn, binary.BigEndian, METHOD_NOT_REQUIRED)
-			if err != nil {
-				return
-			}
+			write(METHOD_NOT_REQUIRED)
 		}
 	}
 
 	// request
 	var cmd, reserved, addrType byte
-	err = binary.Read(conn, binary.BigEndian, &ver)
-	if err != nil {
-		return
-	}
-	err = binary.Read(conn, binary.BigEndian, &cmd)
-	if err != nil {
-		return
-	}
-	err = binary.Read(conn, binary.BigEndian, &reserved)
-	if err != nil {
-		return
-	}
-	err = binary.Read(conn, binary.BigEndian, &addrType)
-	if err != nil {
-		return
-	}
+	read(&ver)
+	read(&cmd)
+	read(&reserved)
+	read(&addrType)
 	if ver != VERSION {
 		return
 	}
@@ -148,7 +131,7 @@ func (self *SocksServer) handshake(conn net.Conn) {
 		address = make([]byte, 4)
 	} else if addrType == ADDR_TYPE_DOMAIN {
 		var domainLength byte
-		err := binary.Read(conn, binary.BigEndian, &domainLength)
+		read(&domainLength)
 		if err != nil {
 			return
 		}
@@ -156,15 +139,9 @@ func (self *SocksServer) handshake(conn net.Conn) {
 	} else if addrType == ADDR_TYPE_IPV6 {
 		address = make([]byte, 16)
 	}
-	err = binary.Read(conn, binary.BigEndian, address)
-	if err != nil {
-		return
-	}
+	read(address)
 	var port uint16
-	err = binary.Read(conn, binary.BigEndian, &port)
-	if err != nil {
-		return
-	}
+	read(&port)
 
 	var hostPort string
 	if addrType == ADDR_TYPE_IP || addrType == ADDR_TYPE_IPV6 {
@@ -184,28 +161,17 @@ func (self *SocksServer) handshake(conn net.Conn) {
 }
 
 func writeAck(conn net.Conn, reply byte) {
-	err := binary.Write(conn, binary.BigEndian, VERSION)
-	if err != nil {
-		return
+	var err error
+	write := func(v interface{}) {
+		if err != nil {
+			return
+		}
+		err = binary.Write(conn, binary.BigEndian, v)
 	}
-	err = binary.Write(conn, binary.BigEndian, reply)
-	if err != nil {
-		return
-	}
-	err = binary.Write(conn, binary.BigEndian, RESERVED)
-	if err != nil {
-		return
-	}
-	err = binary.Write(conn, binary.BigEndian, ADDR_TYPE_IP)
-	if err != nil {
-		return
-	}
-	err = binary.Write(conn, binary.BigEndian, [4]byte{0, 0, 0, 0})
-	if err != nil {
-		return
-	}
-	err = binary.Write(conn, binary.BigEndian, uint16(0))
-	if err != nil {
-		return
-	}
+	write(VERSION)
+	write(reply)
+	write(RESERVED)
+	write(ADDR_TYPE_IP)
+	write([4]byte{0, 0, 0, 0})
+	write(uint16(0))
 }
